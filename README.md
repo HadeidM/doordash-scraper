@@ -1,45 +1,94 @@
 # DoorDash Scraper
 
-Have you ever wanted to download your entire order history from [DoorDash](https://www.doordash.com)? We wanted to do this at [my office](https://www.golden.com) but were unable to find anywhere on their website to do so. Here's my quick solution. Feel free to modify it to fit your desires⁠—there are a lot more data available that this script is not ingesting.
+A tool for automatically downloading and analyzing your full DoorDash order history. It includes a Python-based scraper to export your DoorDash orders (including items, stores, dates, and customizations) to CSV files, and ships with an interactive, visually-rich dashboard (HTML/JS) for data exploration and insight discovery. The project is designed for privacy (runs locally), convenience, and actionable insights about your takeout habits.
+
+
+## Features
+
+✨ **Scrapes complete order history** from DoorDash (items, stores, dates, customizations)  
+📊 **Interactive dashboard** with charts and visualizations  
+🔒 **Security hardened** with XSS prevention and null-safe code  
+💾 **Smart caching** to resume interrupted scrapes  
+🎨 **Beautiful UI** for exploring your order data
+
+## Requirements
+
+```bash
+pip3 install requests
+```
 
 ## Instructions
 
-### Obtain a DoorDash.com sessionid
+### 1. Obtain Your DoorDash Cookies
 
-1. Sign in to your account at https://www.doordash.com/consumer/login/.
-2. Find your `sessionid` cookie. You can use the Application tab of the Chrome DevTools. It will probably be a 32-character string of letters and numbers.
+**Important:** Due to Cloudflare protection, you need to provide your full cookie string (not just sessionid).
 
-### Run the scraper
+1. Sign in to your account at https://www.doordash.com/consumer/login/
+2. Open Chrome DevTools (F12 or Cmd+Option+I on Mac)
+3. Go to the **Network** tab
+4. Navigate to https://www.doordash.com/orders/
+5. Look for a request to `graphql` (with `getConsumerOrdersWithDetails`)
+6. Click on it, scroll to **Request Headers**, and find the `cookie:` header
+7. Copy the **entire cookie string** (it will be very long)
 
-Now just run the scraper with your sessionid. It will output two CSV files containing all your DoorDash orders.
-
-> **Note:** In addition to the `doordash.csv` and `doordash-pivot.csv` files, this script will generate a lot of JSON files in your current directory (roughly one per order). These are the raw responses from each network request. This allows the script to resume where it left off if something goes wrong. If you want to run the script another time with a different sessionid, you'll need to delete all these JSON files so that the script does not think it is resuming.
-
-```bash
-> python doordash_scraper.py 6ess7lab6uzx9xq8c3rey5yzzjn6c6cat
-Fri Aug 16 15:27:02 2019   Fetching all order summaries in batches of 20
-Fri Aug 16 15:27:02 2019   Got an empty batch, so we're done fetching order summaries!
-Fri Aug 16 15:27:02 2019   Writing normal CSV doordash.csv
-Fri Aug 16 15:27:02 2019   Writing pivoted CSV doordash-pivot.csv
+**Example cookie string format:**
+```
+cf_clearance=xxxxx; dd_device_id=xxxxx; sessionid=xxxxx; ...
 ```
 
-## Output format
+### 2. Run the Scraper
+
+Run the scraper with your full cookie string. It will output two CSV files containing all your DoorDash orders.
+
+```bash
+python3 doordash_scraper.py "YOUR_FULL_COOKIE_STRING_HERE"
+```
+
+**With verbose logging:**
+```bash
+python3 doordash_scraper.py "YOUR_FULL_COOKIE_STRING_HERE" -v
+```
+
+**Example output:**
+```bash
+Fetching all order summaries in batches of 20
+Fetched orders from offset 0
+Fetched orders from offset 20
+...
+Got an empty batch, so we're done fetching order summaries!
+Writing normal CSV doordash.csv
+Writing pivoted CSV doordash-pivot.csv
+```
+
+> **Note:** The script generates JSON cache files (`doordash-orders-*.json`) for each API response. These allow resuming if something goes wrong. To do a fresh scrape, delete these cache files first.
+
+### 3. View the Dashboard (Optional)
+
+After scraping, you can visualize your order history with the interactive dashboard:
+
+```bash
+# Start a local web server
+python3 -m http.server 8000
+
+# Open in your browser
+open http://localhost:8000/dashboard.html
+```
+
+The dashboard includes:
+- 📊 **Stats cards**: Total orders, favorite store, date range
+- 📈 **Orders over time**: Line chart showing ordering patterns  
+- 🏆 **Top stores**: Bar chart of your most-visited restaurants
+- 🍕 **Most ordered items**: What you order most frequently
+- 🔍 **Search & filter**: Find specific orders instantly
+
+## Output Format
 
 ### doordash.csv
 
+Complete order history with one row per item ordered:
+
 | Date | Store | Person | Item | Options |
 | ---- | ----- | ------ | ---- | ------- | 
-| 2019-07-08 | Piri Picante | Thomas S. | Whole Bird Combo | Side Choice: Three Bean Chili |
-| 2019-07-02 | Burma Love | Alice A. | Skillet Shrimp (6 Pc) |
-| 2019-07-02 | Burma Love | Thomas S. | Burmese Chicken Salad |
-| 2019-05-26 | Lers Ros Thai | Thomas S. | 78. Pad Thai | Protein Choice: Pork |
-| 2019-05-26 | Lers Ros Thai | Alice A. | 57. Kao Pad Kai Tod |
-
-### doordash-pivot.csv
-
-This table has one row per delivery, and one column per person who ordered an item in that delivery. The script currently only outputs a single item per person per delivery. This is useful if you want to see which items you have previously ordered from a restaurant.
-
-| Date | Store | Thomas S. | Bobert B. | Alice A. |
-| ---- | ----- | --------- | --------- | -------- |
-| 2019-08-05 | Lovely Restaurant | Spicy Bulgogi Pork | Cotton candy | Candy marbles |
-| 2019-07-08 | Faster Food | Pepperoni pizza | Cotton candy | Toffee bar |
+| 2025-11-05 | Panda Express | John Doe | Bigger Plate | Step 1: Super Greens, Step 1: Chow Mein, Step 2: Grilled Teriyaki Chicken |
+| 2025-11-04 | Bonchon Korean Fried Chicken | Foo Bar | Wings | Wing Count: 8 PC Wings |
+| 2025-11-03 | Nando's PERi-PERi | Perry Platypus | Two 1/4 Chicken Legs | PERi-ometer: Hot, Sides?: One Side |
